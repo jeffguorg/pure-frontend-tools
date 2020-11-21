@@ -1,0 +1,10 @@
+{
+    "site": {
+        "title": "Tools"
+    },
+    "nav": {
+        "push-notification": "Push Notification",
+        "getpass": "Password Hashing",
+        "about": "About ME"
+    }
+}

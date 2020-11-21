@@ -1,0 +1,10 @@
+{
+    "site": {
+        "title": "奇奇怪怪的工具"
+    },
+    "nav": {
+        "push-notification": "浏览器通知推送",
+        "getpass": "密码哈希",
+        "about": "关于我"
+    }
+}
