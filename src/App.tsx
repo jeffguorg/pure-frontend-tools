@@ -4,12 +4,13 @@ import { BrowserRouter } from "react-router-dom";
 import {} from "react-bootstrap";
 import "./App.sass"
 
-
-function App() {
-  return (
-    <BrowserRouter>
-    </BrowserRouter>
-  );
+class App extends React.Component {
+  render() {
+    return (
+      <BrowserRouter>
+      </BrowserRouter>
+    );
+  }
 }
 
 export default App;
