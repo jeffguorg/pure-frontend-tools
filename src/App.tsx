@@ -20,10 +20,10 @@ class App extends React.Component<WithTranslation & RouteComponentProps> {
   };
 
   render() {
-    let { t, i18n, location } = this.props;
+    let { t, i18n, location, history } = this.props;
 
     if (location.pathname === "/") {
-      location.pathname = this.path.notification;
+      history.replace(this.path.notification);
     }
 
     return (
