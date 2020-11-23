@@ -1,10 +1,10 @@
 import React from "react";
 
-type TitleProp = {
-    title?: ""
+export type TitleProp = {
+    title: ""
 }
 
-export class BaseComponent extends React.Component<TitleProp> {
+export class BaseComponent<P extends TitleProp = TitleProp, S={}> extends React.Component<P, S> {
     private previousTitle?: string;
     componentDidMount() {
         if (this.props.title !== undefined) {
