@@ -21,7 +21,7 @@ i18n
   .init({
     fallbackLng: 'en',
     supportedLngs: ["zh", "en"],
-    debug: true,
+    debug: false,
     react: {
       useSuspense: false,
     },
