@@ -77,4 +77,13 @@ self.addEventListener('message', (event) => {
   }
 });
 
+self.addEventListener("push", (event: PushEvent) => {
+  self.registration.showNotification("Received Push Message", {
+    body: JSON.stringify({
+      event,
+      data: event.data?.text()
+    })
+  })
+})
+
 // Any other custom service worker logic can go here.
