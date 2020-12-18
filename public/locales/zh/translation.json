@@ -6,5 +6,13 @@
         "push-notification": "浏览器通知推送",
         "getpass": "密码哈希",
         "about": "关于我"
+    },
+    "atomic": {
+        "plain": "原文",
+        "hash": "哈希"
+    },
+    "strings": {
+        "password-hashing": "密码哈希",
+        "password-hashing-wikipedia": "没听说过密码哈希？看一眼维基百科吧"
     }
 }

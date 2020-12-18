@@ -78,12 +78,15 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener("push", (event: PushEvent) => {
-  self.registration.showNotification("Received Push Message", {
-    body: JSON.stringify({
-      event,
-      data: event.data?.text()
+  console.log("event received: ", event)
+  let data = event.data;
+  if(data) {
+    self.registration.showNotification("Received Push Message", {
+      body: data.text()
     })
-  })
+  } else {
+    self.registration.showNotification("Received Empty Push Message")
+  }
 })
 
 // Any other custom service worker logic can go here.

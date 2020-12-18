@@ -1,7 +1,7 @@
 import React from "react";
 
-export type TitleProp = {
-    title: ""
+export interface TitleProp {
+    title?: string
 }
 
 export class BaseComponent<P extends TitleProp = TitleProp, S={}> extends React.Component<P, S> {
@@ -9,7 +9,7 @@ export class BaseComponent<P extends TitleProp = TitleProp, S={}> extends React.
     componentDidMount() {
         if (this.props.title !== undefined) {
             this.previousTitle = document.title;
-            document.title = this.props.title;
+            document.title = this.props.title as string;
         }
     }
     componentWillUnmount() {

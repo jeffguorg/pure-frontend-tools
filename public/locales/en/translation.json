@@ -6,5 +6,13 @@
         "push-notification": "Push Notification",
         "getpass": "Password Hashing",
         "about": "About ME"
+    },
+    "atomic": {
+        "plain": "plain text",
+        "hash": "hash"
+    },
+    "strings": {
+        "password-hashing": "Password Hashing",
+        "password-hashing-wikipedia": "Never heared about password hashing? Check Wikipedia"
     }
 }

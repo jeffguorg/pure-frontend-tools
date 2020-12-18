@@ -1,18 +1,21 @@
 import React from "react";
 
-import { Container, Row, Col, Button, Card } from "react-bootstrap";
+import { Container, Row, Col, Button, Card, InputGroup, FormControl } from "react-bootstrap";
 
 import { BaseComponent, TitleProp } from "./Base";
 import { DefaultPadding } from "../components/Padding"
 
 import { ec } from "elliptic";
 
+import axios from "axios"
 
 let EC = new ec("p256");
 
 type NotificateState = {
     ServiceWorkerScriptURL?: string
     PushSubscriptionObject?: PushSubscription
+    Command?: string
+    BrowserName?: string
 }
 
 type PushNotificationPageButtonTextState = {
@@ -20,28 +23,72 @@ type PushNotificationPageButtonTextState = {
     GolangCodeCopied?: boolean
 }
 
-export class PushNotification extends BaseComponent<TitleProp, NotificateState & PushNotificationPageButtonTextState> {
-    private supported = ('Notification' in window && !!navigator.serviceWorker);
+type ErrorsState = {
+    Error: string[]
+}
 
+export class PushNotification extends BaseComponent<TitleProp, NotificateState & PushNotificationPageButtonTextState & ErrorsState> {
+    private supported = ('Notification' in window && !!navigator.serviceWorker);
     constructor(props: TitleProp) {
         super(props);
 
-        this.state = {}
+        this.state = { Error: [] }
     }
 
     async queryNotificationState() {
         if (this.supported) {
             let registration = await navigator.serviceWorker.getRegistration();
 
+            let subscriptionObj = (await registration?.pushManager.getSubscription()) || undefined
+            if (subscriptionObj) {
+                let browserName = this.state.BrowserName;
+                if (!browserName) {
+                    try {
+                        let randomUserResponse = await axios.get('https://randomuser.me/api/');
+                        let randomUser = randomUserResponse.data.results[0].name;
+                        browserName = `${randomUser.first} ${randomUser.last}`
+                    } catch (e) {
+                        browserName = "a lonely browser"
+                    }
+                }
+
+                let content = JSON.stringify({
+                    Browser: browserName,
+                    Subscription: subscriptionObj,
+                    Options: {
+                        VAPIDPublicKey: Buffer.from(localStorage.getItem("push.pubkey") || "", "hex").toString("base64").replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", ""),
+                        VAPIDPrivateKey: Buffer.from(localStorage.getItem("push.privkey") || "", "hex").toString("base64").replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", ""),
+                    }
+                })
+                this.setState({
+                    Command: `/register ${btoa(content).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "")}`
+                })
+            }
             this.setState({
                 ServiceWorkerScriptURL: navigator.serviceWorker.controller?.scriptURL,
-                PushSubscriptionObject: (await registration?.pushManager.getSubscription()) || undefined
+                PushSubscriptionObject: subscriptionObj
             })
+
         }
     }
 
     componentDidMount() {
         this.queryNotificationState()
+        
+        let browserName = this.state.BrowserName;
+        if (!browserName) {
+            try {
+                axios.get('https://randomuser.me/api/').then(randomUserResponse => {
+                    let randomUser = randomUserResponse.data.results[0].name;
+                    browserName = `${randomUser.first} ${randomUser.last}`
+                    this.setState({
+                        BrowserName: browserName
+                    })
+                })
+            } catch (e) {
+                browserName = "a lonely browser"
+            }
+        }
     }
 
     render() {
@@ -211,6 +258,51 @@ func main() {
                             </DefaultPadding>
                         </Col>
                     </Row>
+
+                    <Row>
+                        <Col>
+                            <DefaultPadding>
+                                <Card>
+                                    <Card.Header>Register this subscription to Telegram Bot @a_demo_push_notification_bot</Card.Header>
+                                    <Card.Body>
+                                        <Container>
+                                            <InputGroup>
+                                            <InputGroup.Prepend>
+                                                <InputGroup.Text>Browser Name</InputGroup.Text>
+                                            </InputGroup.Prepend>
+                                                <FormControl type="input" value={this.state.BrowserName} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => {
+                                                    this.setState({
+                                                        BrowserName: ev.target.value,
+                                                    })
+                                                    this.queryNotificationState()
+                                                }} />
+                                            </InputGroup>
+                                            <Row>
+                                                <Col>
+                                                    <DefaultPadding>
+                                                        {this.state.Command}
+                                                    </DefaultPadding>
+                                                </Col>
+                                            </Row>
+                                        </Container>
+                                    </Card.Body>
+                                    <Card.Footer>
+                                        <DefaultPadding>
+                                            <Button href="https://t.me/a_demo_push_notification_bot">Start Bot</Button>
+                                        </DefaultPadding>
+
+                                        <DefaultPadding>
+                                            <Button onClick={() => {
+                                                if (this.state.Command) {
+                                                    navigator.clipboard.writeText(this.state.Command)
+                                                }
+                                            }}>Copy</Button>
+                                        </DefaultPadding>
+                                    </Card.Footer>
+                                </Card>
+                            </DefaultPadding>
+                        </Col>
+                    </Row>
                     <Row>
                         <Col>
                             <DefaultPadding>
@@ -370,6 +462,26 @@ func main() {
                 </Container>
             )
         } else {
+            let subscribeCode = `navigator.serviceWorker.ready.then(async (reg) => {
+    let keypair = EC.genKeyPair(); 
+    // WARN: the key pair should be generated on the server side, only the public key should be allowed to send to client side
+    let [priv, pub] = [keypair.getPrivate(), keypair.getPublic()];
+    localStorage.setItem("push.privkey", priv.toJSON());
+    localStorage.setItem("push.pubkey", pub.encode("hex", false));
+    let encoded = Uint8Array.from(pub.encode("array", false)).buffer;
+    try {
+        let sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: encoded
+        })
+        if (sub) {
+            this.queryNotificationState();
+        }
+    } catch (e) {
+        console.log("failed to subscribe push notification", e)
+    }
+})
+`
             return (
                 <Container>
                     <Row>
@@ -377,7 +489,34 @@ func main() {
                             <DefaultPadding>
                                 <Card>
                                     <Card.Header>Not Subscribed</Card.Header>
-                                    <Card.Body>Click to get your subcription object!</Card.Body>
+                                    <Card.Body>
+                                        <Container>
+                                            <Row>
+                                                <Col>
+                                                    <DefaultPadding>
+                                                        Click to get your subcription object! The page will execute the following script:
+                                                    </DefaultPadding>
+                                                </Col>
+                                            </Row>
+                                            <Row>
+                                                <Col>
+                                                    <DefaultPadding>
+                                                        <pre id="golang-code">
+                                                            {subscribeCode}
+                                                        </pre>
+                                                    </DefaultPadding>
+                                                </Col>
+                                            </Row>
+                                            {
+                                                this.state.Error.map((e) => (
+                                                    <Row>
+                                                        <Col>
+                                                            <DefaultPadding>{e}</DefaultPadding>
+                                                        </Col>
+                                                    </Row>))
+                                            }
+                                        </Container>
+                                    </Card.Body>
                                     <Card.Footer>
                                         <DefaultPadding><Button color="primary" onClick={() => {
                                             navigator.serviceWorker.ready.then(async (reg) => {
@@ -388,12 +527,25 @@ func main() {
                                                 localStorage.setItem("push.pubkey", pub.encode("hex", false))
                                                 let encoded = Uint8Array.from(pub.encode("array", false)).buffer;
 
-                                                let sub = await reg.pushManager.subscribe({
-                                                    userVisibleOnly: true,
-                                                    applicationServerKey: encoded
-                                                })
-                                                if (sub) {
-                                                    this.queryNotificationState();
+                                                try {
+                                                    let sub = await reg.pushManager.subscribe({
+                                                        userVisibleOnly: true,
+                                                        applicationServerKey: encoded
+                                                    })
+                                                    if (sub) {
+                                                        this.queryNotificationState();
+                                                    }
+                                                } catch (e) {
+                                                    console.log("failed to subscribe push notification", e)
+                                                    if (e instanceof Error) {
+                                                        this.setState({
+                                                            Error: [...this.state.Error, `${e.message}\n${e.stack}`]
+                                                        })
+                                                    } else {
+                                                        this.setState({
+                                                            Error: [...this.state.Error, `${e}`]
+                                                        })
+                                                    }
                                                 }
                                             })
                                         }}>Subscribe</Button></DefaultPadding>
